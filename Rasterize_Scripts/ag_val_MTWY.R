@@ -14,8 +14,8 @@ library(usmap)
 library(fasterize)
 
 # bring in hsi and temp raster
-r <- raster("/Users/jamiefaselt/Resistsance_Surfaces/temp_rstr.tif")
-hsi <- raster("hsi_540_cropped")
+r <- raster("/Users/jamiefaselt/jf_resist/Data/temp_rstr.tif")
+hsi <- raster("/Users/jamiefaselt/jf_resist/Data/hsi_crop_540.tif")
 #bring in counties
 counties <- tigris::counties()
 counties<-counties %>% filter(STATEFP %in%  c("30", "56"))
@@ -33,7 +33,7 @@ counties$County.ANSI <- as.numeric(counties$County.ANSI)
 
 #plot(counties) #checking and this doesn't have weird gaps yet
 # bring in ag val and make values a numeric variable
-agval <- read.csv("/Users/jamiefaselt/Resistsance_Surfaces/Data/ag_val_MTWY.csv")
+agval <- read.csv("/Users/jamiefaselt/jf_resist/Data/ag_val_MTWY.csv")
 agval$Value <- gsub(",","",agval$Value)
 agval$Value <- as.numeric(agval$Value)
 
@@ -52,6 +52,5 @@ rstr<<-fasterize::fasterize(ag.val.sub, r, field = 'Value')
 
 plot(rstr) 
 
-st_write(ag.val.sub,"ag_land_value.shp", overwrite=TRUE)
 writeRaster(rstr, "ag_land_val.tif", overwrite=TRUE)
 
