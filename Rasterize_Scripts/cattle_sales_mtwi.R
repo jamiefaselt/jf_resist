@@ -14,8 +14,8 @@ library(usmap)
 library(fasterize)
 
 # bring in hsi and temp raster
-r <- raster("/Users/jamiefaselt/Resistsance_Surfaces/temp_rstr.tif")
-hsi <- raster("hsi_540_cropped")
+r <- raster("/Users/jamiefaselt/jf_resist/Data/temp_rstr.tif")
+hsi <- raster("/Users/jamiefaselt/jf_resist/Data/hsi_crop_540.tif")
 #bring in counties
 counties <- tigris::counties()
 counties<-counties %>% filter(STATEFP %in%  c("30", "56"))
@@ -52,6 +52,5 @@ rstr<<-fasterize::fasterize(cattle.sales.sub, r, field = 'Value')
 
 plot(rstr) 
 
-st_write(ag.val.sub,"ag_land_value.shp", overwrite=TRUE)
-writeRaster(rstr, "ag_land_val.tif", overwrite=TRUE)
+writeRaster(rstr, "cattle_sales_mtwy.tif", overwrite=TRUE)
 
