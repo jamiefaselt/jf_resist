@@ -26,5 +26,13 @@ counties$State.ANSI <- as.numeric(counties$State.ANSI)
 counties$County.ANSI <- as.numeric(counties$County.ANSI)
 
 #bring in cadastral data
-parcels <- st_read("Data/Cadastral/Montana_Cadastral/OWNERPARCEL.shp")
-plot(parcels)
+mt_parcels <- st_read("Data/Cadastral/Montana_Cadastral/OWNERPARCEL.shp")
+head(mt_parcels)
+# want to get total number of acres for each county-- subtract public and water land
+# get number of unique parcel ids for each county-- total that-- then divide by the acreage to get average parcel size
+
+wy.parcels <- st_read("Data/Wyoming_Parcels/Wyoming_Parcels.shp")
+head(wy.parcels)
+
+
+
