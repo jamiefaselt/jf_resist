@@ -81,20 +81,37 @@ plot(mtwy.pd)
 
 writeRaster(mtwy.pd, "Raster_Layers/mtwy.parcel.density.tif")
 
-parcl.jn.stats <- mt.parcels.area%>% 
+
+##############3
+
+parcl.jn <- st_drop_geometry(mt.parcels) %>% 
   left_join(., pa.cty.area, by = c("CountyName"= "NAME")) %>% 
-  mutate(., parcelratio = mt.parcels.area/nonPAarea) %>% 
+  mutate(., parcelratio = TotalAcres/nonPAarea) %>% 
   group_by(GEOID) %>% 
   summarize(., medratio = median(parcelratio),
             maxratio = max(parcelratio),
             minratio = min(parcelratio),
             sdratio = sd(parcelratio))
-parcl.jn.stats <- left_join(cty, parcl.jn.stats)
+
+
+parcl.jn <- st_drop_geometry(mt.parcels)%>% 
+  left_join(., pa.cty.area, by = c("CountyName"= "NAME")) %>% 
+  mutate(., parcelratio = TotalAcres/nonPAarea) %>% 
+  group_by(GEOID) %>% 
+  summarize(., medratio = median(parcelratio),
+            maxratio = max(parcelratio),
+            minratio = min(parcelratio),
+            sdratio = sd(parcelratio))
+parcl.jn.stats <- left_join(cty, parcl.jn)
 parcl.stats <- st_as_sf(parcl.jn.stats)
 
 parcl.max.rast<-fasterize::fasterize(parcl.stats, r, field = 'maxratio')
-plot(parcl.max.rast)
+plot(log(parcl.max.rast))
+parcl.med.rast<-fasterize::fasterize(parcl.stats, r, field = 'medratio')
+plot(log(parcl.med.rast))
 parcl.min.rast<-fasterize::fasterize(parcl.stats, r, field = 'minratio')
-plot(parcl.min.rast)
+plot(log(parcl.min.rast))
 parcl.sd.rast<-fasterize::fasterize(parcl.stats, r, field = 'sdratio')
-plot(parcl.sd.rast)
+plot(log(parcl.sd.rast))
+
+
