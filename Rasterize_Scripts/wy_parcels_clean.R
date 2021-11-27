@@ -1,7 +1,5 @@
 # wy parcels clean
 
-# Cadastral Parcel Data
-
 library(tigris)
 library(ggplot2)
 library(tidyverse)
@@ -26,7 +24,7 @@ wy.counties<-counties %>% filter(State.ANSI %in%  c("56"))
 wy.counties<-st_transform(wy.counties,st_crs(r))
 cty <- wy.counties %>% st_transform(., st_crs(r))
 
-#bring in pas
+##### PA Area #####
 wy.padus <- st_read("Data/PADUS2_1_StateWY_Shapefile/PADUS2_1Designation_StateWY.shp")
 wy.pas <- st_transform(wy.padus, crs=st_crs(r)) %>% 
   st_make_valid(.)
@@ -50,10 +48,12 @@ pa.cty.area$PAarea[is.na(pa.cty.area$PAarea)] = 0
 pa.cty.area <- mutate(pa.cty.area, nonPAarea = ALAND - as.numeric(PAarea))
 head(pa.cty.area) # this all looks good!
 
-############################################
+##### Parcel Density #####
 #bring in wy parcel data
-wy.parcels <- st_read("Data/Wyoming_Parcels/Wyoming_Parcels.shp")
-head(wy.parcels)
+wy.parcels <- st_read("Data/Wyoming_Parcels/Wyoming_Parcels.shp") %>% 
+  st_make_valid()
+st_is_valid(wy.parcels)
+wy.parcels <- st_transform(wy.parcels,st_crs(r))
 wy.parcels <- rename(wy.parcels,NAME = jurisdicti)
 wy.parcels.drop <- st_drop_geometry(wy.parcels)
 # get the total number in each jurisdiction
@@ -64,69 +64,44 @@ wy.county.parcels <- rename(wy.county.parcels, TotalParcels= parcelnb)
 wy.county.parcels$NAME <- gsub("BIGHORN", "BIG HORN", wy.county.parcels$NAME)
 wy.county.parcels$NAME <- gsub("HOTSPRINGS", "HOT SPRINGS", wy.county.parcels$NAME)
 head(wy.county.parcels)
-
-
-wy.parcl.jn <- wy.county.parcels %>% 
+wy.parcl.dens <- wy.county.parcels %>% 
   left_join(., pa.cty.area) %>% 
   mutate(., parceldensity = TotalParcels/nonPAarea*10000*100) # PD= patches/area then converted to 100 hectares) %>% 
-head(wy.parcl.jn)
+head(wy.parcl.dens)
+wy.parcl.dens <- st_as_sf(wy.parcl.dens)  
+wy.parcl.dens.rast<-fasterize::fasterize(wy.parcl.dens, r, field = 'parceldensity')
+plot(wy.parcl.dens.rast)
+#writeRaster(wy.parcl.rast, "Raster_Layers/wy.parcel.density.tif")
 
-wy.parcl.jn <- st_as_sf(wy.parcl.jn)  
+##### Size Ratio #####
+colnames(wy.parcels)
+wy.parcels <- rename(wy.parcels, TotalParcels= parcelnb)
+wy.parcels$NAME <- gsub("BIGHORN", "BIG HORN", wy.parcels$NAME)
+wy.parcels$NAME <- gsub("HOTSPRINGS", "HOT SPRINGS", wy.parcels$NAME)
+wy.parcels.area <- wy.parcels %>% mutate(., parcel.area = st_area(wy.parcels)) %>% 
+  st_drop_geometry()
 
-wy.parcl.rast<-fasterize::fasterize(wy.parcl.jn, r, field = 'parceldensity')
-plot(wy.parcl.rast)
-writeRaster(wy.parcl.rast, "Raster_Layers/wy.parcel.density.tif")
-
-
-mt.parcl.rast <- rast("")
-
-
-
-
-
-#######################old below
-wy.parcels <-st_read("Data/Wyoming_Parcels/Wyoming_Parcels.shp")
-#wy.parcels.area <- wy.parcels %>% mutate(., wy.parcels.area = st_area(wy.parcels))
-head(wy.parcels)
-wy.parcels <- st_drop_geometry(wy.parcels)
-wy.county.parcels <- wy.parcels %>%
-  group_by(CountyName) %>%
-  summarise(PARCELID = n())    
-wy.county.parcels <- rename(wy.county.parcels, TotalParcels= PARCELID)
-wy.county.parcels <- wy.parcels %>%
-  group_by(CountyName) %>%
-  summarise(TotalAcres = sum(TotalAcres))      
-sum(wy.parcels$TotalAcres) #check to make sure the math made sense
-sum(wy.county.parcels$TotalAcres)
-
-#we really only want the total number of parcels but i have more data just in case
-wy.parcels.clean <- left_join(wy.county.parcels, wy.county.parcel.areas)
-parcl <- wy.parcels.clean %>%
-  mutate(avgsize = TotalAcres/TotalParcels)
-
-parcl.jn <- parcl %>% 
-  left_join(., pa.cty.area, by = c("CountyName"= "NAME")) %>% 
-  mutate(., parceldensity = TotalParcels/nonPAarea*10000*100) # PD= patches/area then converted to 100 hectares) %>% 
-parcl.jn <- st_as_sf(parcl.jn)  
-
-#st_write(parcl.jn, "parcel.density.wy.shp")
-parcl.rast<-fasterize::fasterize(parcl.jn, r, field = 'parceldensity')
-plot(parcl.rast)
-
-parcl.jn.stats <- wy.parcels%>% 
-  left_join(., pa.cty.area, by = c("CountyName"= "NAME")) %>% 
-  mutate(., parcelratio = wy.parcels.area/nonPAarea) %>% 
+wy.parcl.jn.stats <- wy.parcels.area%>% 
+  left_join(., pa.cty.area) %>% 
+  mutate(., parcelratio = parcel.area/nonPAarea) %>% 
   group_by(GEOID) %>% 
   summarize(., medratio = median(parcelratio),
             maxratio = max(parcelratio),
             minratio = min(parcelratio),
             sdratio = sd(parcelratio))
-parcl.jn.stats <- left_join(cty, parcl.jn.stats)
-parcl.stats <- st_as_sf(parcl.jn.stats)
+wy.parcl.jn.stats <- left_join(cty, wy.parcl.jn.stats)
+wy.parcl.stats <- st_as_sf(parcl.jn.stats)
 
 parcl.max.rast<-fasterize::fasterize(parcl.stats, r, field = 'maxratio')
-plot(parcl.max.rast)
+plot(log(parcl.max.rast))
+parcl.med.rast<-fasterize::fasterize(parcl.stats, r, field = 'medratio')
+plot(log(parcl.med.rast))
 parcl.min.rast<-fasterize::fasterize(parcl.stats, r, field = 'minratio')
-plot(parcl.min.rast)
+plot(log(parcl.min.rast))
 parcl.sd.rast<-fasterize::fasterize(parcl.stats, r, field = 'sdratio')
-plot(parcl.sd.rast)
+plot(log(parcl.sd.rast))
+
+
+writeRaster(parcl.max.rast, "Raster_Layers/singlestate/wy.parcel.maxratio.tif")
+writeRaster(parcl.med.rast, "Raster_Layers/singlestate/wy.parcel.medratio.tif")
+writeRaster(parcl.sd.rast, "Raster_Layers/singlestate/wy.parcel.sdratio.tif")

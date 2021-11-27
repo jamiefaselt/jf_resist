@@ -85,10 +85,15 @@ plot(mt.wy.2020)
 
 ##############################################
 # curious to loook at us as a whole
-r1<-terra::rast( xmin=-6500000, xmax= 3500000, ymin=-3000000, ymax=5000000,crs='ESRI:102008', resolution=5000, vals=0)
-r1 <- raster(crs= albers, ext=raster::extent(as(counties, "Spatial")), resolution= 5000)
-r1 <- raster(crs='ESRI:102008', ext=raster::extent(as(counties, "Spatial")), resolution= 1000)
+states <- tigris::states()
+#<-terra::rast( xmin=-6500000, xmax= 3500000, ymin=-3000000, ymax=5000000,crs='ESRI:102008', resolution=5000, vals=0)
+#r1 <- raster(crs= albers, ext=raster::extent(as(counties, "Spatial")), resolution= 5000)
+#r1 <- raster(crs='ESRI:102008', ext=raster::extent(as(counties, "Spatial")), resolution= 1000)
 albers<- st_crs('ESRI:102008') 
+
+r2d2 <- raster(crs= 'ESRI:102008', ext=raster::extent(as(states, "Spatial")), resolution= 90)
+extent(states)
+plot(states)
 
 votes2000.2020 <- read_csv("Data/countypres_2000-2020.csv")
 colnames(votes2000.2020)
@@ -106,7 +111,7 @@ votes <- votes2000.2020 %>% filter(party %in% c("REPUBLICAN")) %>%
 votes.join <- left_join(counties, votes) %>% 
   st_as_sf()
 
-votesavg<-fasterize::fasterize(votes.join, r1, field = 'avgrep')
+votesavg<-fasterize::fasterize(votes.join, r2d2, field = 'avgrep')
 plot(votesavg)
 
 #let's see if 2020 is different than the average 
